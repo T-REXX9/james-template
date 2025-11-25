@@ -206,7 +206,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose, onSu
                       </div>
                       <div>
                           <label className="label">VAT Type</label>
-                          <select className="input" value={formData.vatType} onChange={e => setFormData({...formData, vatType: e.target.value})}>
+                          <select className="input" value={formData.vatType} onChange={e => setFormData({...formData, vatType: e.target.value as 'Inclusive' | 'Exclusive'})}>
                               <option value="Exclusive">Exclusive</option>
                               <option value="Inclusive">Inclusive</option>
                           </select>

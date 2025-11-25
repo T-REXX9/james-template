@@ -245,6 +245,12 @@ const StaffView: React.FC = () => {
                               ) : assignedClients.map(client => {
                                   const clientTotalSales = client.salesHistory.reduce((sum, s) => sum + s.amount, 0);
                                   const hasPurchased = clientTotalSales > 0;
+                                  
+                                  // Compute last contact
+                                  const lastInteraction = client.interactions && client.interactions.length > 0 
+                                      ? [...client.interactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+                                      : null;
+                                  const lastContactDate = lastInteraction ? lastInteraction.date : 'Never';
 
                                   return (
                                     <tr key={client.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -273,7 +279,7 @@ const StaffView: React.FC = () => {
                                                 <span className="text-slate-400 text-sm">-</span>
                                             )}
                                         </td>
-                                        <td className="p-4 text-sm text-slate-500 dark:text-slate-400">{client.lastContactDate}</td>
+                                        <td className="p-4 text-sm text-slate-500 dark:text-slate-400">{lastContactDate}</td>
                                     </tr>
                                   );
                               })}

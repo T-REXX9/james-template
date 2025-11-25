@@ -1,14 +1,22 @@
 
 import { supabase } from '../lib/supabaseClient';
 import { Contact, PipelineDeal, Product } from '../types';
+import { MOCK_CONTACTS, MOCK_PRODUCTS, MOCK_PIPELINE_DEALS } from '../constants';
 
-// With our local mock DB, we can just query directly.
-// The Mock DB handles the seeding from constants, so we trust it returns data.
+// --- CONTACTS SERVICE ---
 
 export const fetchContacts = async (): Promise<Contact[]> => {
   try {
     const { data, error } = await supabase.from('contacts').select('*');
     if (error) throw error;
+    
+    // Auto-seed if empty (Migration helper)
+    if (!data || data.length === 0) {
+       console.log("No contacts found. Seeding database...");
+       await seedContacts();
+       return MOCK_CONTACTS;
+    }
+
     return (data as Contact[]) || [];
   } catch (err) {
     console.error("Error fetching contacts:", err);
@@ -38,21 +46,31 @@ export const updateContact = async (id: string, updates: Partial<Contact>): Prom
 
 export const bulkUpdateContacts = async (ids: string[], updates: Partial<Contact>): Promise<void> => {
     try {
-        // Mock query builder update isn't sophisticated for "IN" clauses in this demo
-        // so we loop. In real Supabase: .in('id', ids).update(updates)
-        for (const id of ids) {
-            await updateContact(id, updates);
-        }
+        const { error } = await supabase
+            .from('contacts')
+            .update(updates)
+            .in('id', ids);
+            
+        if (error) throw error;
     } catch (err) {
         console.error("Error bulk updating contacts:", err);
         throw err;
     }
 }
 
+// --- DEALS SERVICE ---
+
 export const fetchDeals = async (): Promise<PipelineDeal[]> => {
   try {
     const { data, error } = await supabase.from('deals').select('*');
     if (error) throw error;
+    
+    // Auto-seed
+    if (!data || data.length === 0) {
+        await seedDeals();
+        return MOCK_PIPELINE_DEALS;
+    }
+
     return (data as PipelineDeal[]) || [];
   } catch (err) {
     console.error("Error fetching deals:", err);
@@ -66,6 +84,13 @@ export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabase.from('products').select('*');
     if (error) throw error;
+
+    // Auto-seed
+    if (!data || data.length === 0) {
+        await seedProducts();
+        return MOCK_PRODUCTS;
+    }
+
     return (data as Product[]) || [];
   } catch (err) {
     console.error("Error fetching products:", err);
@@ -101,4 +126,49 @@ export const deleteProduct = async (id: string): Promise<void> => {
     console.error("Error deleting product:", err);
     throw err;
   }
+};
+
+// --- SEEDING HELPERS ---
+
+const seedContacts = async () => {
+    // We remove the ID to let Supabase generate new UUIDs, ensuring no conflicts
+    const contactsPayload = MOCK_CONTACTS.map(({ id, ...rest }) => rest);
+    const { error } = await supabase.from('contacts').insert(contactsPayload);
+    if (error) console.error("Seed contacts error:", error);
+}
+
+const seedProducts = async () => {
+    const productsPayload = MOCK_PRODUCTS.map(({ id, ...rest }) => rest);
+    const { error } = await supabase.from('products').insert(productsPayload);
+    if (error) console.error("Seed products error:", error);
+}
+
+const seedDeals = async () => {
+    const dealsPayload = MOCK_PIPELINE_DEALS.map(({ id, ...rest }) => rest);
+    const { error } = await supabase.from('deals').insert(dealsPayload);
+    if (error) console.error("Seed deals error:", error);
+}
+
+// Public migration function
+export const resetAndSeedDatabase = async () => {
+    try {
+        console.log("Starting database seed...");
+        
+        // Note: In a real production app, we would be careful about deleting data.
+        // This is a migration helper for the initial setup.
+        
+        // 1. Seed Contacts
+        await seedContacts();
+        
+        // 2. Seed Products
+        await seedProducts();
+        
+        // 3. Seed Deals
+        await seedDeals();
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Migration failed:", error);
+        return { success: false, error };
+    }
 };
