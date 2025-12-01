@@ -1,4 +1,3 @@
-
 export enum DealStage {
   NEW = 'New',
   DISCOVERY = 'Discovery',
@@ -63,25 +62,26 @@ export interface ContactPerson {
 // Redesigned Contact Schema
 export interface Contact {
   id: string;
-  
+
   // Core Identity
   company: string;          // Mapped from "customer_name"
   customerSince: string;    // Mapped from "since"
   status: CustomerStatus;   // Mapped from "status_filter"
   isHidden: boolean;        // Mapped from "hide_unhide" (true = Hidden, false = Unhidden)
-  
+
   // Organization & Sales
   team: string;
   salesman: string;         // Assigned Agent
+  assignedAgent?: string;
   referBy: string;
-  
+
   // Location
   address: string;          // Official Address
   province: string;
   city: string;
   area: string;
   deliveryAddress: string;
-  
+
   // Financials
   tin: string;
   priceGroup: string;       // "price_group" (AA, BB, etc.)
@@ -90,27 +90,27 @@ export interface Contact {
   transactionType: string;
   vatType: 'Inclusive' | 'Exclusive';
   vatPercentage: string;    // e.g., "12"
-  
+
   // Dealership / Credit
   dealershipTerms: string;
   dealershipSince: string;
   dealershipQuota: number;
   creditLimit: number;
   debtType: 'Good' | 'Bad';
-  
+
   // Meta
   comment: string;
-  
+
   // Nested Data
   contactPersons: ContactPerson[]; // Array of persons
-  
+
   // Legacy / UI Helpers (kept for compatibility with Dashboard/Pipeline components)
   name: string; // Primary contact display name
   avatar: string;
   totalSales?: number;
   balance?: number;
   salesByYear?: Record<string, number>;
-  
+
   // Pipeline specific (optional)
   stage?: DealStage;
   dealValue?: number;
@@ -118,8 +118,7 @@ export interface Contact {
   comments: Comment[];
   salesHistory: SalesRecord[];
   topProducts: string[];
-  assignedAgent?: string; // Syncs with salesman
-  
+
   // AI fields
   aiScore?: number;
   winProbability?: number;
@@ -153,7 +152,7 @@ export interface PipelineDeal {
 export interface PipelineColumn {
   id: string;
   title: string;
-  color: string; 
+  color: string;
   accentColor: string;
 }
 
@@ -193,4 +192,30 @@ export interface Product {
   stock_wh4: number;
   stock_wh5: number;
   stock_wh6: number;
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  activeClients: number;
+  salesThisMonth: number;
+  callsThisWeek: number;
+  conversionRate: number;
+}
+
+export interface CallLog {
+  id: string;
+  contactName: string;
+  company: string;
+  agent_id?: string | null;
+  agentName: string;
+  agentAvatar: string;
+  type: string;
+  status: string;
+  duration: string;
+  time: string;
+  outcome: string;
+  notes: string;
 }
