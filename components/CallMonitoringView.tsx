@@ -1,11 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Phone, PhoneIncoming, PhoneOutgoing, Search, Filter, 
+import {
+  Phone, PhoneIncoming, PhoneOutgoing, Search, Filter,
   Calendar, Target, ArrowUpRight, Send, MessageSquare
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { MOCK_CALL_LOGS, MOCK_AGENTS } from '../constants';
+import { Agent, CallLog } from '../types';
+import { fetchAgents, fetchCallLogs } from '../services/supabaseService';
 
 // Mock Chat Data
 interface ChatMessage {
@@ -28,6 +29,9 @@ const CallMonitoringView: React.FC = () => {
   const [filterAgent, setFilterAgent] = useState('All');
   const [filterType, setFilterType] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [callLogs, setCallLogs] = useState<CallLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
@@ -37,6 +41,21 @@ const CallMonitoringView: React.FC = () => {
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      const [agentData, callLogData] = await Promise.all([
+        fetchAgents(),
+        fetchCallLogs()
+      ]);
+      setAgents(agentData);
+      setCallLogs(callLogData);
+      setIsLoading(false);
+    };
+
+    loadData();
+  }, []);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +109,7 @@ const CallMonitoringView: React.FC = () => {
     setShowMentions(false);
   };
 
-  const filteredAgents = MOCK_AGENTS.filter(agent => 
+  const filteredAgents = agents.filter(agent =>
       agent.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
       agent.role.toLowerCase().includes(mentionQuery.toLowerCase())
   );
@@ -126,10 +145,10 @@ const CallMonitoringView: React.FC = () => {
   };
 
   // --- Metrics Calculation ---
-  const totalCalls = MOCK_CALL_LOGS.length;
-  const completedCalls = MOCK_CALL_LOGS.filter(c => c.status === 'Completed').length;
-  const missedCalls = MOCK_CALL_LOGS.filter(c => c.status === 'Missed').length;
-  const inProgressCalls = MOCK_CALL_LOGS.filter(c => c.status === 'In-Progress').length;
+  const totalCalls = callLogs.length;
+  const completedCalls = callLogs.filter(c => c.status === 'Completed').length;
+  const missedCalls = callLogs.filter(c => c.status === 'Missed').length;
+  const inProgressCalls = callLogs.filter(c => c.status === 'In-Progress').length;
   
   // Mock duration parsing (simplified for demo)
   const parseDuration = (dur: string) => {
@@ -142,18 +161,18 @@ const CallMonitoringView: React.FC = () => {
     return minutes;
   };
   
-  const totalDurationMins = MOCK_CALL_LOGS.reduce((acc, curr) => acc + parseDuration(curr.duration), 0);
+  const totalDurationMins = callLogs.reduce((acc, curr) => acc + parseDuration(curr.duration), 0);
 
   const outcomeData = [
-    { name: 'Successful', value: MOCK_CALL_LOGS.filter(c => c.outcome === 'Successful').length, color: '#10b981' },
-    { name: 'Follow-up', value: MOCK_CALL_LOGS.filter(c => c.outcome === 'Follow-up Needed').length, color: '#f59e0b' },
-    { name: 'Voicemail', value: MOCK_CALL_LOGS.filter(c => c.outcome === 'Voicemail').length, color: '#6366f1' },
-    { name: 'No Answer', value: MOCK_CALL_LOGS.filter(c => c.outcome === 'No Answer').length, color: '#ef4444' },
+    { name: 'Successful', value: callLogs.filter(c => c.outcome === 'Successful').length, color: '#10b981' },
+    { name: 'Follow-up', value: callLogs.filter(c => c.outcome === 'Follow-up Needed').length, color: '#f59e0b' },
+    { name: 'Voicemail', value: callLogs.filter(c => c.outcome === 'Voicemail').length, color: '#6366f1' },
+    { name: 'No Answer', value: callLogs.filter(c => c.outcome === 'No Answer').length, color: '#ef4444' },
   ];
 
   // --- Agent Chart Data ---
-  const agentChartData = MOCK_AGENTS.map(agent => {
-    const agentLogs = MOCK_CALL_LOGS.filter(log => log.agentName === agent.name);
+  const agentChartData = agents.map(agent => {
+    const agentLogs = callLogs.filter(log => log.agentName === agent.name);
     return {
       name: agent.name.split(' ')[0],
       calls: agentLogs.length,
@@ -162,10 +181,10 @@ const CallMonitoringView: React.FC = () => {
   });
 
   // --- Filter Logic ---
-  const filteredLogs = MOCK_CALL_LOGS.filter(log => {
+  const filteredLogs = callLogs.filter(log => {
     const matchesAgent = filterAgent === 'All' || log.agentName === filterAgent;
     const matchesType = filterType === 'All' || log.type === filterType;
-    const matchesSearch = log.contactName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = log.contactName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           log.company.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesAgent && matchesType && matchesSearch;
   });
@@ -179,6 +198,14 @@ const CallMonitoringView: React.FC = () => {
          return <span key={i}>{word} </span>
      });
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-sm text-slate-500 dark:text-slate-300">Loading Supabase data...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-slate-50 dark:bg-slate-950 animate-fadeIn flex flex-col overflow-hidden">
@@ -325,7 +352,7 @@ const CallMonitoringView: React.FC = () => {
                                       onChange={(e) => setFilterAgent(e.target.value)}
                                   >
                                       <option value="All">All Agents</option>
-                                      {[...new Set(MOCK_CALL_LOGS.map(c => c.agentName))].map(agent => (
+                                      {[...new Set(callLogs.map(c => c.agentName))].map(agent => (
                                           <option key={agent} value={agent}>{agent}</option>
                                       ))}
                                   </select>

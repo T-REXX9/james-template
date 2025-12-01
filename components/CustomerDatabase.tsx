@@ -3,9 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Plus, Filter, Users, Eye, EyeOff, Tag, CheckSquare, Square, MoreHorizontal, UserCheck, Loader2, RefreshCw
 } from 'lucide-react';
-import { Contact, CustomerStatus } from '../types';
-import { fetchContacts, bulkUpdateContacts, createContact, updateContact } from '../services/supabaseService';
-import { MOCK_AGENTS } from '../constants';
+import { Agent, Contact, CustomerStatus } from '../types';
+import { fetchContacts, bulkUpdateContacts, createContact, updateContact, fetchAgents } from '../services/supabaseService';
 import AddContactModal from './AddContactModal';
 import ContactDetails from './ContactDetails';
 
@@ -28,7 +27,8 @@ const CustomerDatabase: React.FC = () => {
   const [selectedCustomerForDetail, setSelectedCustomerForDetail] = useState<string | null>(null);
 
   // Bulk Values
-  const [selectedAgentForBulk, setSelectedAgentForBulk] = useState(MOCK_AGENTS[0].name);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [selectedAgentForBulk, setSelectedAgentForBulk] = useState<string>('');
   const [selectedPriceGroupForBulk, setSelectedPriceGroupForBulk] = useState('AA');
 
   useEffect(() => {
@@ -38,9 +38,15 @@ const CustomerDatabase: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-        const data = await fetchContacts();
-        console.log("Loaded contacts:", data);
-        setCustomers(data || []);
+        const [contactsData, agentsData] = await Promise.all([
+          fetchContacts(),
+          fetchAgents()
+        ]);
+        setCustomers(contactsData || []);
+        setAgents(agentsData || []);
+        if (!selectedAgentForBulk && agentsData.length > 0) {
+          setSelectedAgentForBulk(agentsData[0].name);
+        }
     } catch (e) {
         console.error("Failed to load customers", e);
         setCustomers([]);
@@ -360,7 +366,7 @@ const CustomerDatabase: React.FC = () => {
                         onChange={(e) => setSelectedAgentForBulk(e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm"
                      >
-                        {MOCK_AGENTS.map(agent => (
+                        {agents.map(agent => (
                             <option key={agent.id} value={agent.name}>{agent.name}</option>
                         ))}
                      </select>

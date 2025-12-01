@@ -1,20 +1,42 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Supabase-backed CRM dashboard
 
-# Run and deploy your AI Studio app
+This project uses Supabase for authentication and data storage (contacts, products, pipeline deals, agents, and call logs).
 
-This contains everything you need to run your app locally.
+## Prerequisites
+- Node.js 18+
+- Supabase project
 
-View your app in AI Studio: https://ai.studio/apps/drive/1l09FcSHZ-xDF_NYDTqgUxZyn4TvF6zgP
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
+## Setup
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Copy environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Update `.env` with your Supabase project values. The provided sample URL/key in `.env.example` match the supplied project, but you should replace them when deploying your own instance. Never expose the service role key to the browser.
+3. Apply the database schema in Supabase:
+   - Open `supabase_schema.sql` in the Supabase SQL editor or run it with the Supabase CLI.
+4. Seed legacy mock data into Supabase (server side only):
+   - Set server environment variables (these must **not** be exposed to the client):
+     ```bash
+     export SUPABASE_URL=<your-supabase-url>
+     export SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+     ```
+   - Run the migration script using a TS runner such as [`tsx`](https://github.com/esbuild-kit/tsx) or `ts-node`:
+     ```bash
+     npx tsx scripts/seedSupabase.ts
+     ```
+     The script upserts contacts, products, deals, agents, and call logs to avoid duplicates on repeated runs.
+
+## Development
+Start the Vite dev server:
+```bash
+npm run dev
+```
+
+## Supabase configuration notes
+- The client reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from `.env`.
+- Data fetching no longer falls back to local mocks; make sure your Supabase tables contain data (use the seeding script above).
+- Service-role keys are required **only** for running the seeding script and must be kept on the server side.

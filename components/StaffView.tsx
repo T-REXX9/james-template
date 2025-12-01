@@ -5,9 +5,8 @@ import {
   BarChart2, TrendingUp, Users, Calendar, Briefcase,
   ArrowUpRight, ArrowDownRight, Clock, CheckCircle, Award
 } from 'lucide-react';
-import { Contact } from '../types';
-import { MOCK_AGENTS } from '../constants';
-import { fetchContacts } from '../services/supabaseService';
+import { Agent, Contact } from '../types';
+import { fetchAgents, fetchContacts } from '../services/supabaseService';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const ACTIVITY_DATA = [
@@ -19,7 +18,8 @@ const ACTIVITY_DATA = [
 ];
 
 const StaffView: React.FC = () => {
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(MOCK_AGENTS[0].id);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'clients' | 'calls' | 'performance'>('clients');
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,14 +28,36 @@ const StaffView: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      const contacts = await fetchContacts();
-      setAllContacts(contacts);
-      setIsLoading(false);
+      try {
+        const [agentData, contacts] = await Promise.all([
+          fetchAgents(),
+          fetchContacts()
+        ]);
+
+        setAgents(agentData);
+        setAllContacts(contacts);
+        if (!selectedAgentId && agentData.length > 0) {
+          setSelectedAgentId(agentData[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load staff data', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadData();
-  }, []);
+  }, [selectedAgentId]);
 
-  const selectedAgent = MOCK_AGENTS.find(a => a.id === selectedAgentId) || MOCK_AGENTS[0];
+  const selectedAgent = agents.find(a => a.id === selectedAgentId) || {
+    id: 'placeholder',
+    name: agents[0]?.name || 'Add agents in Supabase',
+    role: agents[0]?.role || 'No agent selected',
+    avatar: agents[0]?.avatar || 'https://i.pravatar.cc/150?u=placeholder',
+    activeClients: agents[0]?.activeClients || 0,
+    salesThisMonth: agents[0]?.salesThisMonth || 0,
+    callsThisWeek: agents[0]?.callsThisWeek || 0,
+    conversionRate: agents[0]?.conversionRate || 0,
+  };
   
   // Filter data for the selected agent
   const assignedClients = allContacts.filter(c => c.assignedAgent === selectedAgent.name);
@@ -79,8 +101,8 @@ const StaffView: React.FC = () => {
         </div>
         
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {MOCK_AGENTS.map(agent => (
-                <div 
+            {agents.map(agent => (
+                <div
                     key={agent.id}
                     onClick={() => setSelectedAgentId(agent.id)}
                     className={`p-3 rounded-xl cursor-pointer transition-all border ${
